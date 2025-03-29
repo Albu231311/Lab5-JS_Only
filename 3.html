@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 0;
+      height: 100vh; 
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    #chat-container {
+      flex: 1; 
+      width: 100%;
+      max-width: none;
+      height: auto;
+      border: 1px solid #ccc;
+      background: white;
+      overflow-y: auto;
+      padding: 10px;
+      display: flex;
+      flex-direction: column-reverse;
+    }
+
+    .message-container {
+      display: flex;
+      width: fit-content;
+      max-width: 70%;
+      margin-bottom: 5px;
+    }
+
+    .message {
+      padding: 8px 12px;
+      border-radius: 15px;
+      background: #7c838b;
+      color: white;
+      word-wrap: break-word;
+      text-align: left;
+    }
+
+    .message img {
+      max-width: 100%;
+      border-radius: 5px;
+    }
+
+    
+    .message-container.me {
+      align-self: flex-end;
+    }
+
+    .message.me {
+      background: #4CAF50; /* Verde para mensajes propios */
+      text-align: right;
+    }
+
+    #input-container {
+      display: flex;
+      width: 100%;
+      padding: 10px;
+      background: #fff;
+      border-top: 1px solid #ccc;
+    }
+
+    #message-input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      border-radius: 50px;
+    }
+
+    #send-button {
+      padding: 10px;
+      border: none;
+      background: green;
+      color: white;
+      cursor: pointer;
+      border-radius: 50px;
+      margin-left: 5px;
+    }
+
+    #theme-toggle {
+      padding: 5px;
+      border: none;
+      background: #444;
+      color: white;
+      border-radius: 5px;
+      margin: 5px;
+      align-self: flex-end;
+      border-radius: 50px;
+    }
+
+    /* Modo oscuro */
+    .dark-mode {
+      background-color: #506670;
+      color: white;
+    }
+
+    .dark-mode #chat-container {
+      background: #445a64;
+      border: 1px solid #555;
+    }
+
+    .dark-mode .message {
+      background: #128c7e;
+    }
+
+    .dark-mode #theme-toggle {
+      background: #555;
+    }
+  </style>
+</head>
+<body>
+
+  <button id="theme-toggle">Modo Oscuro</button>
+  <div id="chat-container"></div>
+  <div id="input-container">
+    <input type="text" id="message-input" placeholder="Escribir...✏️✏️" maxlength="140">
+    <button id="send-button">Enviar</button>
+  </div>
+
+  <script>
+    const SERVER_URL = "https://chat.nrywhite.lat/chats";
+    const chatContainer = document.getElementById("chat-container");
+    const messageInput = document.getElementById("message-input");
+    const sendButton = document.getElementById("send-button");
+    const themeToggle = document.getElementById("theme-toggle");
+
+    const USERNAME = "Carlitos"; 
+
+    async function getMessages() {
+      try {
+        const response = await fetch(SERVER_URL);
+        const messages = await response.json();
+
+        chatContainer.innerHTML = "";
+        messages.reverse().forEach(msg => {
+          const username = msg.username || "Anónimo";
+          const message = msg.message || "";
+
+          const messageContainer = document.createElement("div");
+          messageContainer.classList.add("message-container");
+
+          const messageElement = document.createElement("div");
+          messageElement.classList.add("message");
+
+          if (username === USERNAME) {
+            messageContainer.classList.add("me");
+            messageElement.classList.add("me");
+          }
+
+          if (message.match(/\.(jpeg|jpg|gif|png)$/)) {
+            messageElement.innerHTML = `<b>${username}:</b> <br> <img src="${message}" alt="imagen">`;
+          } else if (message.startsWith("http")) {
+            messageElement.innerHTML = `<b>${username}:</b> <br> <a href="${message}" target="_blank">${message}</a>`;
+          } else {
+            messageElement.innerHTML = `<b>${username}:</b> ${message}`;
+          }
+
+          messageContainer.appendChild(messageElement);
+          chatContainer.appendChild(messageContainer);
+        });
+
+        setTimeout(() => {
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 100);
+
+      } catch (error) {
+        console.error("Error obteniendo mensajes:", error);
+      }
+    }
+
+    async function sendMessage() {
+      const message = messageInput.value.trim();
+      if (!message) return;
+
+      try {
+        await fetch(SERVER_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: USERNAME, message })
+        });
+
+        messageInput.value = "";
+        getMessages(); 
+
+      } catch (error) {
+        console.error("Error enviando mensaje:", error);
+      }
+    }
+
+    messageInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    sendButton.addEventListener("click", sendMessage);
+    getMessages();
+    setInterval(getMessages, 10000);
+
+    function toggleTheme() {
+      if (document.body.classList.contains("dark-mode")) {
+        document.body.classList.remove("dark-mode");
+        localStorage.setItem("theme", "light");
+        themeToggle.textContent = "Modo Oscuro";
+      } else {
+        document.body.classList.add("dark-mode");
+        localStorage.setItem("theme", "dark");
+        themeToggle.textContent = "Modo Claro";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const savedTheme = localStorage.getItem("theme") || "light";
+      if (savedTheme === "dark") {
+        document.body.classList.add("dark-mode");
+        themeToggle.textContent = "Modo Claro";
+      }
+    });
+
+    themeToggle.addEventListener("click", toggleTheme);
+  </script>
+
+</body>
+</html>
